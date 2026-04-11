@@ -18,7 +18,7 @@ if st.button("開始導讀"):
         try:
             # 設定 API Key 並呼叫模型
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
             # 定義 AI 的靈魂指令 (Prompt)
             prompt = f"""
