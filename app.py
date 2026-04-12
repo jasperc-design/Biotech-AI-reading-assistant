@@ -130,19 +130,32 @@ elif app_mode == "📚 批次文獻處理與報表":
                     progress_bar.progress((i + 1) / len(abstracts))
                 
                 st.success("批次處理完畢！")
-                df = pd.DataFrame(results)
-                st.dataframe(df)
                 
-                csv = df.to_csv(index=False).encode('utf-8-sig')
+                # --- UI 優化：改用「折疊面板」漂亮呈現，不再使用難閱讀的 DataFrame ---
+                st.subheader("📊 導讀結果預覽")
+                for idx, row in enumerate(results):
+                    # 預設展開第一筆，其他的折疊起來
+                    with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
+                        st.markdown(f"**原文摘要 (前100字):**\n> {row['原文摘要 (前100字)']}")
+                        st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
+                
+                # --- 匯出優化：產生真正的 Excel (.xlsx) 檔案 ---
+                df = pd.DataFrame(results)
+                
+                from io import BytesIO
+                output = BytesIO()
+                # 引擎指定使用 openpyxl 寫入 Excel 格式
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='AI導讀報告')
+                
+                excel_data = output.getvalue()
+                
                 st.download_button(
-                    label="📥 下載 Excel (CSV) 報表",
-                    data=csv,
-                    file_name="生技文獻導讀批次報表.csv",
-                    mime="text/csv",
+                    label="📥 下載完整 Excel 報表 (.xlsx)",
+                    data=excel_data,
+                    file_name="生技文獻導讀批次報表.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
-            except Exception as e:
-                st.error(f"發生錯誤：{e}")
-
 # ==========================================
 # 模組三：蛋白質預測 (中心法則)
 # ==========================================
