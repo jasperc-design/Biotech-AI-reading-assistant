@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import pandas as pd
+from io import BytesIO
 
 # ==========================================
 # UI 基礎配置與全域設定
@@ -131,23 +132,21 @@ elif app_mode == "📚 批次文獻處理與報表":
                 
                 st.success("批次處理完畢！")
                 
-                # --- UI 優化：改用「折疊面板」漂亮呈現，不再使用難閱讀的 DataFrame ---
+                # --- UI 優化：改用「折疊面板」 ---
                 st.subheader("📊 導讀結果預覽")
                 for idx, row in enumerate(results):
-                    # 預設展開第一筆，其他的折疊起來
                     with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
                         st.markdown(f"**原文摘要 (前100字):**\n> {row['原文摘要 (前100字)']}")
                         st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
                 
                 # --- 匯出優化：產生真正的 Excel (.xlsx) 檔案 ---
                 df = pd.DataFrame(results)
-                
-                from io import BytesIO
                 output = BytesIO()
-                # 引擎指定使用 openpyxl 寫入 Excel 格式
+                
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
                     df.to_excel(writer, index=False, sheet_name='AI導讀報告')
                 
+                output.seek(0) # 關鍵修復：將游標移回檔案開頭
                 excel_data = output.getvalue()
                 
                 st.download_button(
@@ -156,10 +155,13 @@ elif app_mode == "📚 批次文獻處理與報表":
                     file_name="生技文獻導讀批次報表.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 )
+            except Exception as e:
+                st.error(f"發生錯誤：{e}")
+
 # ==========================================
 # 模組三：蛋白質預測 (中心法則)
 # ==========================================
-elif app_mode == "🔬 蛋白質預測 (中心法則)：":
+elif app_mode == "🔬 蛋白質預測 (中心法則)":
     st.header("🔬 中心法則模擬與 AI 蛋白質預測")
     st.write("整合基礎生物資訊演算法與 LLM，展示從 DNA 序列解析到巨觀特性預測的自動化流程。")
     
@@ -169,7 +171,6 @@ elif app_mode == "🔬 蛋白質預測 (中心法則)：":
         if not api_key:
             st.error("請先在左側欄位輸入 API Key！")
         else:
-            # 演算法執行
             clean_dna = dna_input.upper().replace(" ", "").replace("\n", "")
             rna_seq = clean_dna.replace("T", "U") 
             protein_seq = translate_rna_to_protein(rna_seq)
