@@ -1,50 +1,42 @@
 import streamlit as st
-import google.generativeai as genai
+from openai import OpenAI
 import pandas as pd
 from io import BytesIO
+import requests
+from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
 # ==========================================
 # UI 基礎配置與全域設定
 # ==========================================
 st.set_page_config(page_title="生技資訊 AI 工具箱", page_icon="🧬", layout="wide")
 
-# --- 側邊欄導覽與設定 ---
 with st.sidebar:
     st.title("🧬 生技資訊 AI 工具箱")
     st.write("APCS 組專題實作：結合資訊技術與生物產業科學")
     st.markdown("---")
     
-    # 統一在這裡輸入密碼，全站通用
-    api_key = st.text_input("🔑 請輸入 Gemini API Key：", type="password")
+    st.subheader("🔑 API 密碼設定 (高 CP 值雙引擎架構)")
+    # 展現依據預算與任務調度不同 AI 模型的架構能力
+    perplexity_api_key = st.text_input("Perplexity API Key (用於文獻處理)：", type="password")
+    openai_api_key = st.text_input("OpenAI API Key (GPT-4o-mini 用於生化解析)：", type="password")
     st.markdown("---")
     
-    # 建立系統導覽選單
-    st.subheader("🖥️ 功能導覽模組")
     app_mode = st.radio(
-        "請選擇您要使用的分析工具：", 
-        ["📄 單篇文獻 AI 導讀", 
-         "📚 批次文獻處理與報表", 
-         "🔬 蛋白質預測 (中心法則)"]
+        "🖥️ 請選擇分析工具：", 
+        ["📄 單篇文獻 AI 導讀 (Perplexity)", 
+         "📚 批次文獻處理與報表 (Perplexity)", 
+         "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-mini)"]
     )
 
-# ==========================================
-# 共用資源區塊：RNA 密碼子對應胺基酸的字典
-# ==========================================
+# 共用 RNA 密碼子表
 CODON_TABLE = {
-    'AUA':'I', 'AUC':'I', 'AUU':'I', 'AUG':'M',
-    'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACU':'T',
-    'AAC':'N', 'AAU':'N', 'AAA':'K', 'AAG':'K',
-    'AGC':'S', 'AGU':'S', 'AGA':'R', 'AGG':'R',
-    'CUA':'L', 'CUC':'L', 'CUG':'L', 'CUU':'L',
-    'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCU':'P',
-    'CAC':'H', 'CAU':'H', 'CAA':'Q', 'CAG':'Q',
-    'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGU':'R',
-    'GUA':'V', 'GUC':'V', 'GUG':'V', 'GUU':'V',
-    'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCU':'A',
-    'GAC':'D', 'GAU':'D', 'GAA':'E', 'GAG':'E',
-    'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGU':'G',
-    'UCA':'S', 'UCC':'S', 'UCG':'S', 'UCU':'S',
-    'UUC':'F', 'UUU':'F', 'UUA':'L', 'UUG':'L',
+    'AUA':'I', 'AUC':'I', 'AUU':'I', 'AUG':'M', 'ACA':'T', 'ACC':'T', 'ACG':'T', 'ACU':'T',
+    'AAC':'N', 'AAU':'N', 'AAA':'K', 'AAG':'K', 'AGC':'S', 'AGU':'S', 'AGA':'R', 'AGG':'R',
+    'CUA':'L', 'CUC':'L', 'CUG':'L', 'CUU':'L', 'CCA':'P', 'CCC':'P', 'CCG':'P', 'CCU':'P',
+    'CAC':'H', 'CAU':'H', 'CAA':'Q', 'CAG':'Q', 'CGA':'R', 'CGC':'R', 'CGG':'R', 'CGU':'R',
+    'GUA':'V', 'GUC':'V', 'GUG':'V', 'GUU':'V', 'GCA':'A', 'GCC':'A', 'GCG':'A', 'GCU':'A',
+    'GAC':'D', 'GAU':'D', 'GAA':'E', 'GAG':'E', 'GGA':'G', 'GGC':'G', 'GGG':'G', 'GGU':'G',
+    'UCA':'S', 'UCC':'S', 'UCG':'S', 'UCU':'S', 'UUC':'F', 'UUU':'F', 'UUA':'L', 'UUG':'L',
     'UAC':'Y', 'UAU':'Y', 'UAA':'_', 'UAG':'_', 'UGA':'_', 'UGG':'W',
 }
 
@@ -54,157 +46,166 @@ def translate_rna_to_protein(rna_seq):
         codon = rna_seq[i:i+3]
         if len(codon) == 3:
             amino_acid = CODON_TABLE.get(codon, '?')
-            if amino_acid == '_': # 終止密碼子
-                break
+            if amino_acid == '_': break
             protein += amino_acid
     return protein
 
 # ==========================================
-# 模組一：單篇文獻 AI 導讀
+# 模組一：單篇文獻 AI 導讀 (Powered by Perplexity)
 # ==========================================
-if app_mode == "📄 單篇文獻 AI 導讀":
+if app_mode == "📄 單篇文獻 AI 導讀 (Perplexity)":
     st.header("📄 生技文獻 AI 導讀助手")
-    st.write("快速將生技領域的英文學術摘要，轉換為結構化的中文導讀。")
-    
+    st.write("利用 Perplexity 開源模型的高效文本解析能力，轉換結構化的中文導讀。")
     text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
     
-    if st.button("開始單篇導讀"):
-        if not api_key:
-            st.error("請先在左側欄位輸入 API Key！")
-        elif not text_input:
-            st.warning("請貼上文獻摘要！")
+    if st.button("開始導讀"):
+        if not perplexity_api_key: st.error("請先在左側輸入 Perplexity API Key！")
+        elif not text_input: st.warning("請貼上文獻摘要！")
         else:
             try:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
-                prompt = f"""
-                你現在是一位專業的生物科技產業分析師與學術導讀員。請將以下英文學術摘要轉換為高中生能理解的繁體中文。
+                # 透過更改 base_url，讓 OpenAI 套件去呼叫 Perplexity 的伺服器
+                client = OpenAI(api_key=perplexity_api_key, base_url="https://api.perplexity.ai")
+                prompt = f"""你是一位專業的生物科技產業分析師。請將以下英文學術摘要轉換為高中生能理解的繁體中文。
                 請固定以三個部分輸出：1. 研究目的、2. 核心技術、3. 產業應用價值。
-                文獻摘要：\n{text_input}
-                """
-                with st.spinner('AI 正在分析文獻中...'):
-                    response = model.generate_content(prompt)
+                文獻摘要：\n{text_input}"""
+                
+                with st.spinner('Perplexity 正在解析文獻中...'):
+                    response = client.chat.completions.create(
+                        model="llama-3.1-sonar-small-128k-chat", # Perplexity 高效能模型
+                        messages=[{"role": "user", "content": prompt}]
+                    )
                 st.success("導讀完成！")
-                st.write(response.text)
+                st.write(response.choices[0].message.content)
             except Exception as e:
                 st.error(f"發生錯誤：{e}")
 
 # ==========================================
-# 模組二：批次文獻處理與報表
+# 模組二：批次文獻處理與報表 (Powered by Perplexity)
 # ==========================================
-elif app_mode == "📚 批次文獻處理與報表":
+elif app_mode == "📚 批次文獻處理與報表 (Perplexity)":
     st.header("📚 批次文獻處理與 Excel 匯出")
-    st.write("結合迴圈處理與 Pandas 數據清理技術，將大量非結構化文獻轉化為結構化報表。")
-    st.info("上傳純文字檔 (.txt)。若有多篇摘要，請在每篇摘要之間使用三個減號 `---` 隔開。")
-    
+    st.info("上傳純文字檔 (.txt)，每篇摘要之間使用 `---` 隔開。")
     uploaded_file = st.file_uploader("選擇您的 TXT 檔案", type=['txt'])
     
-    if st.button("啟動批次自動化分析"):
-        if not api_key:
-            st.error("請先在左側欄位輸入 API Key！")
-        elif uploaded_file is None:
-            st.warning("請先上傳檔案！")
+    if st.button("啟動批次分析"):
+        if not perplexity_api_key: st.error("請輸入 Perplexity API Key！")
+        elif uploaded_file is None: st.warning("請先上傳檔案！")
         else:
             try:
-                genai.configure(api_key=api_key)
-                model = genai.GenerativeModel('gemini-2.5-flash')
+                client = OpenAI(api_key=perplexity_api_key, base_url="https://api.perplexity.ai")
                 content = uploaded_file.getvalue().decode("utf-8")
                 abstracts = [abs.strip() for abs in content.split("---") if abs.strip()]
                 
-                st.write(f"✅ 成功讀取 **{len(abstracts)}** 篇文獻摘要，準備進入產線處理...")
                 results = []
                 progress_bar = st.progress(0)
                 
                 for i, abstract in enumerate(abstracts):
-                    prompt = f"""
-                    請簡要分析以下生物科技學術摘要。請固定輸出這三個項目：
-                    - 研究目的：(一句話)
-                    - 核心技術：(一句話)
-                    - 應用價值：(一句話)
-                    摘要：\n{abstract}
-                    """
-                    response = model.generate_content(prompt)
+                    prompt = f"""請分析此生物科技摘要，固定輸出：- 研究目的：(一句話)\n- 核心技術：(一句話)\n- 應用價值：(一句話)\n摘要：\n{abstract}"""
+                    response = client.chat.completions.create(
+                        model="llama-3.1-sonar-small-128k-chat",
+                        messages=[{"role": "user", "content": prompt}]
+                    )
                     results.append({
                         "原文摘要 (前100字)": abstract[:100] + "...",
-                        "AI 導讀報告": response.text
+                        "AI 導讀報告": response.choices[0].message.content
                     })
                     progress_bar.progress((i + 1) / len(abstracts))
                 
                 st.success("批次處理完畢！")
-                
-                # --- UI 優化：改用「折疊面板」 ---
-                st.subheader("📊 導讀結果預覽")
                 for idx, row in enumerate(results):
                     with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
-                        st.markdown(f"**原文摘要 (前100字):**\n> {row['原文摘要 (前100字)']}")
+                        st.markdown(f"**原文摘要:**\n> {row['原文摘要 (前100字)']}")
                         st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
                 
-                # --- 匯出優化：產生真正的 Excel (.xlsx) 檔案 ---
                 df = pd.DataFrame(results)
                 output = BytesIO()
-                
                 with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                    df.to_excel(writer, index=False, sheet_name='AI導讀報告')
-                
-                output.seek(0) # 關鍵修復：將游標移回檔案開頭
-                excel_data = output.getvalue()
-                
-                st.download_button(
-                    label="📥 下載完整 Excel 報表 (.xlsx)",
-                    data=excel_data,
-                    file_name="生技文獻導讀批次報表.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+                    df.to_excel(writer, index=False, sheet_name='導讀報告')
+                output.seek(0)
+                st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"發生錯誤：{e}")
 
 # ==========================================
-# 模組三：蛋白質預測 (中心法則)
+# 模組三：蛋白質特徵與 UniProt 檢索 (Powered by GPT-4o-mini)
 # ==========================================
-elif app_mode == "🔬 蛋白質預測 (中心法則)":
-    st.header("🔬 中心法則模擬與 AI 蛋白質預測")
-    st.write("整合基礎生物資訊演算法與 LLM，展示從 DNA 序列解析到巨觀特性預測的自動化流程。")
+elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-mini)":
+    st.header("🔬 序列解析、特徵運算與 UniProt 檢索")
+    st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 GPT-4o-mini 進行高階推理。")
+    dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
     
-    dna_input = st.text_area("請輸入 DNA 序列 (僅限 A, T, C, G)：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
-    
-    if st.button("執行演算法與 AI 預測"):
-        if not api_key:
-            st.error("請先在左側欄位輸入 API Key！")
+    if st.button("執行生資管線分析"):
+        if not openai_api_key: st.error("請在左側輸入 OpenAI API Key！")
         else:
+            # 1. 中心法則轉譯
             clean_dna = dna_input.upper().replace(" ", "").replace("\n", "")
-            rna_seq = clean_dna.replace("T", "U") 
-            protein_seq = translate_rna_to_protein(rna_seq)
-
-            col1, col2, col3 = st.columns(3)
-            col1.metric("輸入 DNA 長度", f"{len(clean_dna)} bp")
-            col2.metric("轉錄 mRNA", "成功")
-            col3.metric("轉譯胺基酸", f"{len(protein_seq)} aa")
-
-            st.code(f"mRNA 序列: {rna_seq}\n胺基酸序列: {protein_seq}", language="text")
-
-            if len(protein_seq) > 0:
-                st.markdown("---")
-                st.subheader("🤖 AI 蛋白質特性預測報告")
-                try:
-                    genai.configure(api_key=api_key)
-                    model = genai.GenerativeModel('gemini-2.5-flash')
-                    prompt = f"""
-                    你現在是一位頂尖的結構生物學家與生物資訊專家。
-                    我有一段剛剛透過中心法則演算法轉譯出來的胺基酸序列：{protein_seq}
-
-                    請根據這段序列，提供簡要的學術分析：
-                    1. 胺基酸組成特徵 (例如：疏水/親水比例、帶電狀況)。
-                    2. 二級結構預測 (傾向形成 Alpha-helix 還是 Beta-sheet？)。
-                    3. 潛在功能推測 (如果這是一個真實蛋白質片段，可能具備什麼類型的功能？)。
-                    
-                    請用高中生能理解的繁體中文回答，語氣專業但易懂。
-                    """
-                    with st.spinner('正在將序列傳送至 AI 結構資料庫分析中...'):
-                        response = model.generate_content(prompt)
-                    
-                    st.success("分析完成！")
-                    st.write(response.text)
-                except Exception as e:
-                    st.error(f"AI 連線發生錯誤：{e}")
+            protein_seq = translate_rna_to_protein(clean_dna.replace("T", "U"))
+            
+            if len(protein_seq) < 5:
+                st.warning("轉譯序列過短，請提供更長的 DNA 序列。")
             else:
-                st.warning("轉譯出的胺基酸序列為空，請檢查輸入的 DNA。")
+                col1, col2 = st.columns(2)
+                col1.code(f"mRNA: {clean_dna.replace('T', 'U')}", language="text")
+                col2.code(f"Protein: {protein_seq}", language="text")
+                
+                # 2. 導入 Biopython 消除 AI 幻覺
+                st.subheader("⚙️ Biopython 物理化學特徵計算")
+                try:
+                    analysis = ProteinAnalysis(protein_seq)
+                    mw = round(analysis.molecular_weight(), 2)
+                    pi = round(analysis.isoelectric_point(), 2)
+                    gravy = round(analysis.gravy(), 3)
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("分子量 (MW)", f"{mw} Da")
+                    c2.metric("等電點 (pI)", f"{pi}")
+                    c3.metric("親疏水性 (GRAVY)", f"{gravy}")
+                except Exception as e:
+                    st.error(f"Biopython 運算錯誤：{e}")
+                    mw, pi, gravy = "N/A", "N/A", "N/A"
+
+                # 3. 串接 UniProt 真實資料庫
+                st.subheader("🌐 UniProt 資料庫即時檢索")
+                uniprot_hit = "未找到完全匹配的已知蛋白質（可能為未知、人工設計或過短的短肽）。"
+                try:
+                    with st.spinner("正在向瑞士 UniProt 伺服器發送序列檢索請求..."):
+                        url = f"https://rest.uniprot.org/uniprotkb/search?query=sequence:{protein_seq}&format=json"
+                        res = requests.get(url)
+                        data = res.json()
+                        if data.get('results') and len(data['results']) > 0:
+                            top_hit = data['results'][0]
+                            protein_name = top_hit.get('proteinDescription', {}).get('recommendedName', {}).get('fullName', {}).get('value', 'Unknown')
+                            organism = top_hit.get('organism', {}).get('scientificName', 'Unknown')
+                            uniprot_hit = f"匹配成功！此序列屬於 **{organism}** 的 **{protein_name}**。"
+                        st.info(uniprot_hit)
+                except Exception as e:
+                    st.error("UniProt API 連線失敗。")
+
+                # 4. GPT-4o-mini 統整分析
+                st.markdown("---")
+                st.subheader("🤖 GPT-4o-mini 綜合生化報告")
+                try:
+                    client = OpenAI(api_key=openai_api_key)
+                    prompt = f"""
+                    請根據以下系統計算出的「絕對正確數據」來產生生化報告，不要自己瞎猜物理數值：
+                    - 胺基酸序列：{protein_seq}
+                    - 分子量：{mw} Da
+                    - 等電點(pI)：{pi}
+                    - GRAVY(親疏水性)：{gravy} (正值為疏水，負值為親水)
+                    - UniProt 檢索結果：{uniprot_hit}
+                    
+                    請簡要分析：
+                    1. 根據 GRAVY 與 pI 預測此蛋白質在細胞內的可能分佈環境。
+                    2. 綜合評估其潛在功能或特性。
+                    """
+                    with st.spinner('GPT-4o-mini 正在進行深度生化推理...'):
+                        response = client.chat.completions.create(
+                            model="gpt-4o-mini", # 🎯 關鍵改動：換上最高 CP 值的 mini 引擎
+                            messages=[
+                                {"role": "system", "content": "你是一位頂尖的結構生物學家與生物資訊專家，擅長根據硬數據進行嚴謹推論。請用高中生能理解的繁體中文回答。"},
+                                {"role": "user", "content": prompt}
+                            ]
+                        )
+                    st.write(response.choices[0].message.content)
+                except Exception as e:
+                    st.error(f"OpenAI 連線錯誤：{e} (請確認您的 API Key 是否有可用額度)")
