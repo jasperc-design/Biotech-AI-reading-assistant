@@ -142,20 +142,21 @@ elif app_mode == "📚 批次文獻處理與報表":
                         
                         st.success("批次處理完畢！")
                         for idx, row in enumerate(results):
-                            # 折疊面板標題再縮短一點，讓畫面更乾淨
-                            preview_text = row['原文摘要 (前100字)'][:40] + "..." if len(row['原文摘要 (前100字)']) > 40 else row['原文摘要 (前100字)']
+                            # 折疊面板的標題預覽 (取前40字)
+                            preview_text = row['百字摘要'][:40] + "..." if len(row['百字摘要']) > 40 else row['百字摘要']
                             
                             with st.expander(f"📄 文獻 {idx+1}：{preview_text}", expanded=(idx==0)):
-                                st.markdown(f"**原文摘要 (前100字):**\n> {row['原文摘要 (前100字)']}")
+                                # 💡 完美符合 UX 設計：直接在網頁顯示「百字摘要」，手機閱讀無負擔！
+                                st.markdown(f"**原文摘要 (前100字):**\n> {row['百字摘要']}")
                                 st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
                         
-                        df = pd.DataFrame(results)
+                        # 💡 報表匯出：一樣取 ['百字摘要', 'AI 導讀報告'] 兩個欄位寫入 Excel
+                        df = pd.DataFrame(results)[['百字摘要', 'AI 導讀報告']]
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
                             df.to_excel(writer, index=False, sheet_name='導讀報告')
                             
                             worksheet = writer.sheets['導讀報告']
-                            # A 欄跟 B 欄都設定為 60 的寬度，維持 Excel 報表的俐落感
                             worksheet.column_dimensions['A'].width = 60
                             worksheet.column_dimensions['B'].width = 60
                             for row_cells in worksheet.iter_rows():
@@ -163,7 +164,7 @@ elif app_mode == "📚 批次文獻處理與報表":
                                     cell.alignment = Alignment(wrap_text=True, vertical='top')
                                     
                         output.seek(0)
-                        st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        st.download_button(label="📥 下載排版完美的 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"連線或處理時發生錯誤：{e}")
 
