@@ -60,16 +60,16 @@ def get_groq_client():
 if app_mode == "📄 單篇文獻 AI 導讀":
     st.header("📄 生技文獻 AI 導讀助手")
     st.write("調用極速 8B 模型，快速轉換結構化的中文導讀。")
-    text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
+    text_input = st.text_area("請貼上單篇生技英文文獻：", height=200)
     
     if st.button("開始導讀"):
         if not groq_api_key: st.error("請先在左側輸入 Groq API Key！")
-        elif not text_input: st.warning("請貼上文獻摘要！")
+        elif not text_input: st.warning("請貼上文獻！")
         else:
             try:
                 client = get_groq_client()
                 prompt = f"""你是一位專業的生物科技產業分析師。請將以下英文學術摘要轉換為高中生能理解的繁體中文。請固定以三個部分輸出：1. 研究目的、2. 核心技術、3. 產業應用價值。文獻摘要：\n{text_input}"""
-                with st.spinner('Groq 正在極速解析文獻中...'):
+                with st.spinner('Groq 正在解析文獻中...'):
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}]
