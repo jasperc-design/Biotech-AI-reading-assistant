@@ -1,7 +1,9 @@
 import streamlit as st
 from openai import OpenAI
+# 💡 請確認你的程式碼最上方有 import 這兩行（用來控制 Excel 排版）
 import pandas as pd
 from io import BytesIO
+from openpyxl.styles import Alignment # 新增這行！
 import requests
 from Bio.SeqUtils.ProtParam import ProteinAnalysis
 
@@ -90,55 +92,75 @@ elif app_mode == "📚 批次文獻處理與報表 (Llama-3 8B)":
         elif uploaded_file is None: st.warning("請先上傳檔案！")
         else:
             try:
-                import time # 導入時間模組來做緩衝
+                import time
                 client = get_groq_client()
-                
-                # 💡 防護一：解決 Windows 記事本編碼問題
                 raw_bytes = uploaded_file.getvalue()
-                try:
-                    content = raw_bytes.decode("utf-8")
-                except UnicodeDecodeError:
-                    content = raw_bytes.decode("big5", errors="ignore")
                 
-                abstracts = [abs.strip() for abs in content.split("---") if abs.strip()]
-                
-                if not abstracts:
-                    st.warning("檔案中找不到文字，請確認檔案格式是否正確。")
+                if len(raw_bytes) == 0:
+                    st.error("⚠️ 偵測到檔案是空的 (0 Bytes)！您是不是忘記按 Ctrl+S 存檔就上傳了？")
                 else:
-                    results = []
-                    progress_bar = st.progress(0)
+                    try:
+                        content = raw_bytes.decode("utf-8-sig")
+                    except UnicodeDecodeError:
+                        try:
+                            content = raw_bytes.decode("utf-16")
+                        except UnicodeDecodeError:
+                            content = raw_bytes.decode("big5", errors="ignore")
                     
-                    for i, abstract in enumerate(abstracts):
-                        prompt = f"""請分析此生物科技摘要，固定輸出：- 研究目的：(一句話)\n- 核心技術：(一句話)\n- 應用價值：(一句話)\n摘要：\n{abstract}"""
-                        response = client.chat.completions.create(
-                            model="llama-3.1-8b-instant",
-                            messages=[{"role": "user", "content": prompt}]
-                        )
-                        results.append({
-                            "原文摘要 (前100字)": abstract[:100] + "...",
-                            "AI 導讀報告": response.choices[0].message.content
-                        })
+                    content = content.replace("———", "---").replace("—", "---")
+                    abstracts = [abs.strip() for abs in content.split("---") if abs.strip()]
+                    
+                    if not abstracts:
+                        st.warning("檔案中找不到文字，請確認檔案格式是否正確。")
+                    else:
+                        results = []
+                        progress_bar = st.progress(0)
                         
-                        progress_bar.progress((i + 1) / len(abstracts))
+                        for i, abstract in enumerate(abstracts):
+                            # 💡 升級提示詞：強制 AI 不要講廢話
+                            prompt = f"""請分析此生物科技摘要，嚴格遵守以下格式輸出，絕對不要包含「分析如下」、「這是一篇...」等任何前言或結語：
+- 研究目的：(一句話)
+- 核心技術：(一句話)
+- 應用價值：(一句話)
+
+摘要：\n{abstract}"""
+                            response = client.chat.completions.create(
+                                model="llama-3.1-8b-instant",
+                                messages=[{"role": "user", "content": prompt}]
+                            )
+                            results.append({
+                                "原文摘要 (前100字)": abstract[:100] + "...",
+                                "AI 導讀報告": response.choices[0].message.content.strip() # .strip() 把頭尾多餘的空白或換行清掉
+                            })
+                            progress_bar.progress((i + 1) / len(abstracts))
+                            if i < len(abstracts) - 1:
+                                time.sleep(2.5)
                         
-                        # 💡 防護二：避免觸發 Groq 的頻率限制 (Rate Limit)
-                        if i < len(abstracts) - 1:
-                            time.sleep(2.5) # 每次請求間隔 2.5 秒，確保連線穩定
-                    
-                    st.success("批次處理完畢！")
-                    for idx, row in enumerate(results):
-                        with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
-                            st.markdown(f"**原文摘要:**\n> {row['原文摘要 (前100字)']}")
-                            st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
-                    
-                    df = pd.DataFrame(results)
-                    output = BytesIO()
-                    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                        df.to_excel(writer, index=False, sheet_name='導讀報告')
-                    output.seek(0)
-                    st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        st.success("批次處理完畢！")
+                        for idx, row in enumerate(results):
+                            with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
+                                st.markdown(f"**原文摘要:**\n> {row['原文摘要 (前100字)']}")
+                                st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
+                        
+                        # 💡 升級 Excel 匯出：加入排版控制
+                        df = pd.DataFrame(results)
+                        output = BytesIO()
+                        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                            df.to_excel(writer, index=False, sheet_name='導讀報告')
+                            
+                            # 取得目前的工作表
+                            worksheet = writer.sheets['導讀報告']
+                            
+                            # 調整所有欄位的寬度並設定自動換行
+                            for column_cells in worksheet.columns:
+                                worksheet.column_dimensions[column_cells[0].column_letter].width = 60 # 調整欄寬為 60
+                                for cell in column_cells:
+                                    cell.alignment = Alignment(wrap_text=True, vertical='top') # 設定自動換行且靠上對齊
+                                    
+                        output.seek(0)
+                        st.download_button(label="📥 下載排版完美的 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次_格式化.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
-                st.error(f"連線或處理時發生錯誤：{e} (如果顯示 429 Too Many Requests，請稍等一分鐘後再試)")
+                st.error(f"連線或處理時發生錯誤：{e}")
 
 # ==========================================
 # 模組三：蛋白質特徵與 UniProt 檢索 (Agentic AI)
