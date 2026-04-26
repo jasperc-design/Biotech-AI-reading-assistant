@@ -136,7 +136,7 @@ elif app_mode == "🔬 蛋白質特徵與資料庫比對":
     st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 Gemini 進行推理。")
     dna_input = st.text_area("請輸入 DNA 序列：")
     
-    if st.button("執行生資管線分析"):
+    if st.button("執行蛋白質特徵對比與預測"):
         if not gemini_api_key: st.error("請在左側輸入 Gemini API Key！")
         else:
             # 1. 中心法則轉譯
