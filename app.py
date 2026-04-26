@@ -161,11 +161,12 @@ elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Agentic AI 架構)":
                 guessed_name = "Unknown"
                 
                 try:
-                    with st.spinner("啟動 Agent 1：正在讓 AI 預測序列名稱..."):
+                    with st.spinner("啟動 Agent 1：正在讓 70B AI 預測序列名稱..."):
                         client = get_groq_client()
-                        guess_prompt = f"Please identify the most likely protein name for this exact amino acid sequence: {protein_seq}. Respond with ONLY the official protein name or gene symbol (e.g., RPL41, Glucagon, Insulin), and nothing else. If you are not sure, respond with 'Unknown'."
+                        # 稍微修改提示詞，拿掉退縮的 Unknown 條件，鼓勵它大膽輸出基因縮寫
+                        guess_prompt = f"Identify the human gene symbol for this exact amino acid sequence: {protein_seq}. Respond with ONLY the official gene symbol (e.g. RPL41, GCG). Do not explain."
                         guess_res = client.chat.completions.create(
-                            model="llama-3.1-8b-instant",
+                            model="llama-3.3-70b-versatile", # 🎯 關鍵升級：換成 70B 頂級模型
                             messages=[{"role": "user", "content": guess_prompt}]
                         )
                         guessed_name = guess_res.choices[0].message.content.strip().replace('"', '').replace("'", "")
