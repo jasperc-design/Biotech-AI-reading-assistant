@@ -117,7 +117,6 @@ elif app_mode == "📚 批次文獻處理與報表":
                         progress_bar = st.progress(0)
                         
                         for i, abstract in enumerate(abstracts):
-                            # 💡 升級提示詞：強制 AI 不要講廢話
                             prompt = f"""請分析此生物科技摘要，嚴格遵守以下格式輸出，絕對不要包含「分析如下」、「這是一篇...」等任何前言或結語：
 - 研究目的：(一句話)
 - 核心技術：(一句話)
@@ -128,34 +127,40 @@ elif app_mode == "📚 批次文獻處理與報表":
                                 model="llama-3.1-8b-instant",
                                 messages=[{"role": "user", "content": prompt}]
                             )
+                            
+                            # 💡 完美截斷邏輯：判斷長度，超過 100 字才加「...」，低於 100 字則保持原樣
+                            snippet = abstract[:100] + "..." if len(abstract) > 100 else abstract
+                            
                             results.append({
-                                "原文摘要 (前100字)": abstract[:100] + "...",
-                                "AI 導讀報告": response.choices[0].message.content.strip() # .strip() 把頭尾多餘的空白或換行清掉
+                                "原文摘要 (前100字)": snippet,
+                                "AI 導讀報告": response.choices[0].message.content.strip()
                             })
+                            
                             progress_bar.progress((i + 1) / len(abstracts))
                             if i < len(abstracts) - 1:
                                 time.sleep(2.5)
                         
                         st.success("批次處理完畢！")
                         for idx, row in enumerate(results):
-                            with st.expander(f"📄 文獻 {idx+1} 導讀結果", expanded=(idx==0)):
-                                st.markdown(f"**原文摘要:**\n> {row['原文摘要 (前100字)']}")
+                            # 折疊面板標題再縮短一點，讓畫面更乾淨
+                            preview_text = row['原文摘要 (前100字)'][:40] + "..." if len(row['原文摘要 (前100字)']) > 40 else row['原文摘要 (前100字)']
+                            
+                            with st.expander(f"📄 文獻 {idx+1}：{preview_text}", expanded=(idx==0)):
+                                st.markdown(f"**原文摘要 (前100字):**\n> {row['原文摘要 (前100字)']}")
                                 st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
                         
-                        # 💡 升級 Excel 匯出：加入排版控制
                         df = pd.DataFrame(results)
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
                             df.to_excel(writer, index=False, sheet_name='導讀報告')
                             
-                            # 取得目前的工作表
                             worksheet = writer.sheets['導讀報告']
-                            
-                            # 調整所有欄位的寬度並設定自動換行
-                            for column_cells in worksheet.columns:
-                                worksheet.column_dimensions[column_cells[0].column_letter].width = 60 # 調整欄寬為 60
-                                for cell in column_cells:
-                                    cell.alignment = Alignment(wrap_text=True, vertical='top') # 設定自動換行且靠上對齊
+                            # A 欄跟 B 欄都設定為 60 的寬度，維持 Excel 報表的俐落感
+                            worksheet.column_dimensions['A'].width = 60
+                            worksheet.column_dimensions['B'].width = 60
+                            for row_cells in worksheet.iter_rows():
+                                for cell in row_cells:
+                                    cell.alignment = Alignment(wrap_text=True, vertical='top')
                                     
                         output.seek(0)
                         st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
