@@ -18,7 +18,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.subheader("🔑 API 密碼設定 (Groq)")
-    st.markdown("使用 Groq 利用Groq應對不同面向的問題。")
+    st.markdown("使用 Groq 利用不同模型應對不同面向的問題。")
     groq_api_key = st.text_input("請輸入 Groq API Key：", type="password").strip()
     st.markdown("---")
     
