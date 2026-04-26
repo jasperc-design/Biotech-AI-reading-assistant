@@ -128,11 +128,13 @@ elif app_mode == "📚 批次文獻處理與報表":
                                 messages=[{"role": "user", "content": prompt}]
                             )
                             
-                            # 💡 完美截斷邏輯：判斷長度，超過 100 字才加「...」，低於 100 字則保持原樣
+                            # 智能截斷邏輯：產生給 Excel 用的百字摘要
                             snippet = abstract[:100] + "..." if len(abstract) > 100 else abstract
                             
+                            # 💡 核心修復：同時把「完整原文」跟「百字摘要」都存起來
                             results.append({
-                                "原文摘要 (前100字)": snippet,
+                                "完整原文": abstract,          # 給網頁顯示用
+                                "百字摘要": snippet,           # 給 Excel 匯出用
                                 "AI 導讀報告": response.choices[0].message.content.strip()
                             })
                             
@@ -142,15 +144,15 @@ elif app_mode == "📚 批次文獻處理與報表":
                         
                         st.success("批次處理完畢！")
                         for idx, row in enumerate(results):
-                            # 折疊面板的標題預覽 (取前40字)
+                            # 折疊面板的標題預覽 (更短一點)
                             preview_text = row['百字摘要'][:40] + "..." if len(row['百字摘要']) > 40 else row['百字摘要']
                             
                             with st.expander(f"📄 文獻 {idx+1}：{preview_text}", expanded=(idx==0)):
-                                # 💡 完美符合 UX 設計：直接在網頁顯示「百字摘要」，手機閱讀無負擔！
-                                st.markdown(f"**原文摘要 (前100字):**\n> {row['百字摘要']}")
+                                # 💡 網頁 UI：顯示「完整原文」，點開就能看到全部！
+                                st.markdown(f"**完整原文:**\n> {row['完整原文']}")
                                 st.markdown(f"**AI 分析:**\n{row['AI 導讀報告']}")
                         
-                        # 💡 報表匯出：一樣取 ['百字摘要', 'AI 導讀報告'] 兩個欄位寫入 Excel
+                        # 💡 報表匯出：我們只要取 ['百字摘要', 'AI 導讀報告'] 兩個欄位寫入 Excel
                         df = pd.DataFrame(results)[['百字摘要', 'AI 導讀報告']]
                         output = BytesIO()
                         with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -164,7 +166,7 @@ elif app_mode == "📚 批次文獻處理與報表":
                                     cell.alignment = Alignment(wrap_text=True, vertical='top')
                                     
                         output.seek(0)
-                        st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        st.download_button(label="📥 下載排版完美的 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"連線或處理時發生錯誤：{e}")
 
