@@ -188,7 +188,7 @@ elif app_mode == "🔬 蛋白質特徵與資料庫比對":
                 st.subheader("🤖 Gemini 綜合生化報告")
                 try:
                     genai.configure(api_key=gemini_api_key)
-                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    model = genai.GenerativeModel('gemini-pro')
                     prompt = f"""
                     請根據以下系統計算出的「絕對正確數據」來產生生化報告，不要自己瞎猜物理數值：
                     - 胺基酸序列：{protein_seq}
