@@ -12,21 +12,21 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 st.set_page_config(page_title="生技資訊 AI 工具箱", page_icon="🧬", layout="wide")
 
 with st.sidebar:
-    st.title("🧬 生技資訊 AI 工具箱")
+    st.title("🧬 生技資訊 AI 工具")
     st.write("APCS 組專題實作：結合資訊技術與生物產業科學")
     st.markdown("---")
     
-    st.subheader("🔑 API 密碼設定 (零成本雙引擎架構)")
-    st.markdown("以 **Groq Llama-3** 處理文本，**Gemini** 負責生化推理，展現零成本高效能架構。")
+    st.subheader("🔑 API 密碼")
+    st.markdown("以 **Groq Llama-3** 處理文本，**Gemini** 負責生化推理。")
     groq_api_key = st.text_input("Groq API Key (Llama 3 用於文獻處理)：", type="password")
     gemini_api_key = st.text_input("Gemini API Key (用於生化解析)：", type="password")
     st.markdown("---")
     
     app_mode = st.radio(
         "🖥️ 請選擇分析工具：", 
-        ["📄 單篇文獻 AI 導讀 (Groq Llama-3)", 
-         "📚 批次文獻處理與報表 (Groq Llama-3)", 
-         "🔬 蛋白質特徵與資料庫比對 (Biopython + Gemini)"]
+        ["📄 單篇文獻 AI 導讀", 
+         "📚 批次文獻處理與報表", 
+         "🔬 蛋白質特徵與資料庫比對"]
     )
 
 # 共用 RNA 密碼子表
@@ -54,7 +54,7 @@ def translate_rna_to_protein(rna_seq):
 # ==========================================
 # 模組一：單篇文獻 AI 導讀
 # ==========================================
-if app_mode == "📄 單篇文獻 AI 導讀 (Groq Llama-3)":
+if app_mode == "📄 單篇文獻 AI 導讀":
     st.header("📄 生技文獻 AI 導讀助手")
     st.write("利用 Groq 平台超高速運行 Llama-3 開源模型，轉換結構化的中文導讀。")
     text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
@@ -70,7 +70,7 @@ if app_mode == "📄 單篇文獻 AI 導讀 (Groq Llama-3)":
                 請固定以三個部分輸出：1. 研究目的、2. 核心技術、3. 產業應用價值。
                 文獻摘要：\n{text_input}"""
                 
-                with st.spinner('Groq Llama-3 正在極速解析文獻中...'):
+                with st.spinner('Groq Llama-3 正在解析文獻中...'):
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant", # Groq 上的免費極速模型
                         messages=[{"role": "user", "content": prompt}]
@@ -83,7 +83,7 @@ if app_mode == "📄 單篇文獻 AI 導讀 (Groq Llama-3)":
 # ==========================================
 # 模組二：批次文獻處理與報表
 # ==========================================
-elif app_mode == "📚 批次文獻處理與報表 (Groq Llama-3)":
+elif app_mode == "📚 批次文獻處理與報表":
     st.header("📚 批次文獻處理與 Excel 匯出")
     st.info("上傳純文字檔 (.txt)，每篇摘要之間使用 `---` 隔開。")
     uploaded_file = st.file_uploader("選擇您的 TXT 檔案", type=['txt'])
@@ -130,9 +130,9 @@ elif app_mode == "📚 批次文獻處理與報表 (Groq Llama-3)":
 # ==========================================
 # 模組三：蛋白質特徵與 UniProt 檢索
 # ==========================================
-elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + Gemini)":
+elif app_mode == "🔬 蛋白質特徵與資料庫比對":
     st.header("🔬 序列解析、特徵運算與 UniProt 檢索")
-    st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 Gemini 進行高階推理。")
+    st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 Gemini 進行推理。")
     dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
     
     if st.button("執行生資管線分析"):
