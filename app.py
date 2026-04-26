@@ -8,15 +8,15 @@ from Bio.SeqUtils.ProtParam import ProteinAnalysis
 # ==========================================
 # UI 基礎配置與全域設定
 # ==========================================
-st.set_page_config(page_title="生技資訊 AI 工具箱", page_icon="🧬", layout="wide")
+st.set_page_config(page_title="生技資訊 AI 工具", page_icon="🧬", layout="wide")
 
 with st.sidebar:
-    st.title("🧬 生技資訊 AI 工具箱")
+    st.title("🧬 生技資訊 AI 工具")
     st.write("APCS 組專題實作：結合資訊技術與生物產業科學")
     st.markdown("---")
     
-    st.subheader("🔑 API 密碼設定 (Groq 雙模型架構)")
-    st.markdown("使用 Groq 雲端平台調度不同參數級別的開源大模型。")
+    st.subheader("🔑 API 密碼設定")
+    st.markdown("使用 Groq 的不同模型處理其擅長的問題。")
     # 現在只需要一把萬能鑰匙！
     groq_api_key = st.text_input("請輸入 Groq API Key：", type="password").strip()
     st.markdown("---")
@@ -59,7 +59,7 @@ def get_groq_client():
 # ==========================================
 if app_mode == "📄 單篇文獻 AI 導讀 (Llama-3 8B)":
     st.header("📄 生技文獻 AI 導讀助手")
-    st.write("調用極速 8B 模型，瞬間轉換結構化的中文導讀。")
+    st.write("調用極速 8B 模型，快速轉換結構化的中文導讀。")
     text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
     
     if st.button("開始導讀"):
@@ -72,7 +72,7 @@ if app_mode == "📄 單篇文獻 AI 導讀 (Llama-3 8B)":
                 請固定以三個部分輸出：1. 研究目的、2. 核心技術、3. 產業應用價值。
                 文獻摘要：\n{text_input}"""
                 
-                with st.spinner('Groq 正在極速解析文獻中...'):
+                with st.spinner('Groq 正在快速解析文獻中...'):
                     response = client.chat.completions.create(
                         model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}]
@@ -134,8 +134,8 @@ elif app_mode == "📚 批次文獻處理與報表 (Llama-3 8B)":
 # ==========================================
 elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + Llama-3 70B)":
     st.header("🔬 序列解析、特徵運算與 UniProt 檢索")
-    st.write("使用 Biopython 運算特徵，檢索 UniProt，並交由頂級 70B 大模型進行高階推理。")
-    dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
+    st.write("使用 Biopython 運算特徵，檢索 UniProt，並交由 70B 大模型進行推理。")
+    dna_input = st.text_area("請輸入 DNA 序列：")
     
     if st.button("執行生資管線分析"):
         if not groq_api_key: st.error("請在左側輸入 Groq API Key！")
