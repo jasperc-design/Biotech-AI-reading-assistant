@@ -18,7 +18,7 @@ with st.sidebar:
     st.markdown("---")
     
     st.subheader("🔑 API 密碼設定 (Groq)")
-    st.markdown("使用 Groq 利用不同模型應對不同面向的問題。")
+    st.markdown("使用 Groq 的不同模型應對不同面向的問題。")
     groq_api_key = st.text_input("請輸入 Groq API Key：", type="password").strip()
     st.markdown("---")
     
@@ -164,7 +164,7 @@ elif app_mode == "📚 批次文獻處理與報表":
                                     cell.alignment = Alignment(wrap_text=True, vertical='top')
                                     
                         output.seek(0)
-                        st.download_button(label="📥 下載排版完美的 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"連線或處理時發生錯誤：{e}")
 
