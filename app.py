@@ -133,7 +133,7 @@ elif app_mode == "📚 批次文獻處理與報表":
 elif app_mode == "🔬 蛋白質特徵與資料庫比對":
     st.header("🔬 序列解析、特徵運算與 UniProt 檢索")
     st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 Gemini 進行推理。")
-    dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
+    dna_input = st.text_area("請輸入 DNA 序列：")
     
     if st.button("執行生資管線分析"):
         if not gemini_api_key: st.error("請在左側輸入 Gemini API Key！")
