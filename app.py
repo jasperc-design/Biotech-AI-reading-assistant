@@ -17,16 +17,16 @@ with st.sidebar:
     st.write("APCS 組專題實作：結合資訊技術與生物產業科學")
     st.markdown("---")
     
-    st.subheader("🔑 API 密碼設定 (Groq 雙模型架構)")
-    st.markdown("使用 Groq 雲端平台調度不同參數級別的開源大模型。")
+    st.subheader("🔑 API 密碼設定 (Groq)")
+    st.markdown("使用 Groq 利用Groq應對不同面向的問題。")
     groq_api_key = st.text_input("請輸入 Groq API Key：", type="password").strip()
     st.markdown("---")
     
     app_mode = st.radio(
         "🖥️ 請選擇分析工具：", 
-        ["📄 單篇文獻 AI 導讀 (Llama-3 8B)", 
-         "📚 批次文獻處理與報表 (Llama-3 8B)", 
-         "🔬 蛋白質特徵與資料庫比對 (Agentic AI 架構)"]
+        ["📄 單篇文獻 AI 導讀", 
+         "📚 批次文獻處理與報表", 
+         "🔬 蛋白質特徵與資料庫比對"]
     )
 
 # 共用 RNA 密碼子表 (已修復 Cysteine Bug)
@@ -57,9 +57,9 @@ def get_groq_client():
 # ==========================================
 # 模組一：單篇文獻 AI 導讀
 # ==========================================
-if app_mode == "📄 單篇文獻 AI 導讀 (Llama-3 8B)":
+if app_mode == "📄 單篇文獻 AI 導讀":
     st.header("📄 生技文獻 AI 導讀助手")
-    st.write("調用極速 8B 模型，瞬間轉換結構化的中文導讀。")
+    st.write("調用極速 8B 模型，快速轉換結構化的中文導讀。")
     text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
     
     if st.button("開始導讀"):
@@ -82,7 +82,7 @@ if app_mode == "📄 單篇文獻 AI 導讀 (Llama-3 8B)":
 # ==========================================
 # 模組二：批次文獻處理與報表 (Llama-3 8B)
 # ==========================================
-elif app_mode == "📚 批次文獻處理與報表 (Llama-3 8B)":
+elif app_mode == "📚 批次文獻處理與報表":
     st.header("📚 批次文獻處理與 Excel 匯出")
     st.info("上傳純文字檔 (.txt)，每篇摘要之間使用 `---` 隔開。")
     uploaded_file = st.file_uploader("選擇您的 TXT 檔案", type=['txt'])
@@ -158,17 +158,17 @@ elif app_mode == "📚 批次文獻處理與報表 (Llama-3 8B)":
                                     cell.alignment = Alignment(wrap_text=True, vertical='top') # 設定自動換行且靠上對齊
                                     
                         output.seek(0)
-                        st.download_button(label="📥 下載排版完美的 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次_格式化.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                        st.download_button(label="📥 下載 Excel 報表 (.xlsx)", data=output.getvalue(), file_name="生技文獻導讀批次.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
             except Exception as e:
                 st.error(f"連線或處理時發生錯誤：{e}")
 
 # ==========================================
 # 模組三：蛋白質特徵與 UniProt 檢索 (Agentic AI)
 # ==========================================
-elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Agentic AI 架構)":
+elif app_mode == "🔬 蛋白質特徵與資料庫比對":
     st.header("🔬 序列解析與 Agentic AI 資料庫檢索")
-    st.write("展示矽谷最新的 Agentic Workflow：讓 AI 預測特徵，再由系統自動調用真實資料庫驗證。")
-    dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTGCTAAATGGCGTAAAAAACGTATGCGTCGTCTGAAACGTAAACGTCGTAAAATGCGTCAGCGTTCCAAACGTGCTCCTGCT")
+    st.write("Agentic Workflow：讓 AI 預測特徵，再由系統自動調用真實資料庫驗證。")
+    dna_input = st.text_area("請輸入 DNA 序列：")
     
     if st.button("執行生資管線分析"):
         if not groq_api_key: st.error("請在左側輸入 Groq API Key！")
