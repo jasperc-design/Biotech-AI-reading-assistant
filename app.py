@@ -1,5 +1,6 @@
 import streamlit as st
 from openai import OpenAI
+import google.generativeai as genai
 import pandas as pd
 from io import BytesIO
 import requests
@@ -15,17 +16,17 @@ with st.sidebar:
     st.write("APCS 組專題實作：結合資訊技術與生物產業科學")
     st.markdown("---")
     
-    st.subheader("🔑 API 密碼設定 (高 CP 值雙引擎架構)")
-    # 展現依據預算與任務調度不同 AI 模型的架構能力
-    perplexity_api_key = st.text_input("Perplexity API Key (用於文獻處理)：", type="password")
-    openai_api_key = st.text_input("OpenAI API Key (GPT-4o-mini 用於生化解析)：", type="password")
+    st.subheader("🔑 API 密碼設定 (零成本雙引擎架構)")
+    st.markdown("以 **Groq Llama-3** 處理文本，**Gemini** 負責生化推理，展現零成本高效能架構。")
+    groq_api_key = st.text_input("Groq API Key (Llama 3 用於文獻處理)：", type="password")
+    gemini_api_key = st.text_input("Gemini API Key (用於生化解析)：", type="password")
     st.markdown("---")
     
     app_mode = st.radio(
         "🖥️ 請選擇分析工具：", 
-        ["📄 單篇文獻 AI 導讀 (Perplexity)", 
-         "📚 批次文獻處理與報表 (Perplexity)", 
-         "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-mini)"]
+        ["📄 單篇文獻 AI 導讀 (Groq Llama-3)", 
+         "📚 批次文獻處理與報表 (Groq Llama-3)", 
+         "🔬 蛋白質特徵與資料庫比對 (Biopython + Gemini)"]
     )
 
 # 共用 RNA 密碼子表
@@ -51,27 +52,27 @@ def translate_rna_to_protein(rna_seq):
     return protein
 
 # ==========================================
-# 模組一：單篇文獻 AI 導讀 (Powered by Perplexity)
+# 模組一：單篇文獻 AI 導讀
 # ==========================================
-if app_mode == "📄 單篇文獻 AI 導讀 (Perplexity)":
+if app_mode == "📄 單篇文獻 AI 導讀 (Groq Llama-3)":
     st.header("📄 生技文獻 AI 導讀助手")
-    st.write("利用 Perplexity 開源模型的高效文本解析能力，轉換結構化的中文導讀。")
+    st.write("利用 Groq 平台超高速運行 Llama-3 開源模型，轉換結構化的中文導讀。")
     text_input = st.text_area("請貼上單篇生技英文文獻摘要：", height=200)
     
     if st.button("開始導讀"):
-        if not perplexity_api_key: st.error("請先在左側輸入 Perplexity API Key！")
+        if not groq_api_key: st.error("請先在左側輸入 Groq API Key！")
         elif not text_input: st.warning("請貼上文獻摘要！")
         else:
             try:
-                # 透過更改 base_url，讓 OpenAI 套件去呼叫 Perplexity 的伺服器
-                client = OpenAI(api_key=perplexity_api_key, base_url="https://api.perplexity.ai")
+                # 設定 Groq API 端點
+                client = OpenAI(api_key=groq_api_key, base_url="https://api.groq.com/openai/v1")
                 prompt = f"""你是一位專業的生物科技產業分析師。請將以下英文學術摘要轉換為高中生能理解的繁體中文。
                 請固定以三個部分輸出：1. 研究目的、2. 核心技術、3. 產業應用價值。
                 文獻摘要：\n{text_input}"""
                 
-                with st.spinner('Perplexity 正在解析文獻中...'):
+                with st.spinner('Groq Llama-3 正在極速解析文獻中...'):
                     response = client.chat.completions.create(
-                        model="llama-3.1-sonar-small-128k-chat", # Perplexity 高效能模型
+                        model="llama-3.1-8b-instant", # Groq 上的免費極速模型
                         messages=[{"role": "user", "content": prompt}]
                     )
                 st.success("導讀完成！")
@@ -80,19 +81,19 @@ if app_mode == "📄 單篇文獻 AI 導讀 (Perplexity)":
                 st.error(f"發生錯誤：{e}")
 
 # ==========================================
-# 模組二：批次文獻處理與報表 (Powered by Perplexity)
+# 模組二：批次文獻處理與報表
 # ==========================================
-elif app_mode == "📚 批次文獻處理與報表 (Perplexity)":
+elif app_mode == "📚 批次文獻處理與報表 (Groq Llama-3)":
     st.header("📚 批次文獻處理與 Excel 匯出")
     st.info("上傳純文字檔 (.txt)，每篇摘要之間使用 `---` 隔開。")
     uploaded_file = st.file_uploader("選擇您的 TXT 檔案", type=['txt'])
     
     if st.button("啟動批次分析"):
-        if not perplexity_api_key: st.error("請輸入 Perplexity API Key！")
+        if not groq_api_key: st.error("請輸入 Groq API Key！")
         elif uploaded_file is None: st.warning("請先上傳檔案！")
         else:
             try:
-                client = OpenAI(api_key=perplexity_api_key, base_url="https://api.perplexity.ai")
+                client = OpenAI(api_key=groq_api_key, base_url="https://api.groq.com/openai/v1")
                 content = uploaded_file.getvalue().decode("utf-8")
                 abstracts = [abs.strip() for abs in content.split("---") if abs.strip()]
                 
@@ -102,7 +103,7 @@ elif app_mode == "📚 批次文獻處理與報表 (Perplexity)":
                 for i, abstract in enumerate(abstracts):
                     prompt = f"""請分析此生物科技摘要，固定輸出：- 研究目的：(一句話)\n- 核心技術：(一句話)\n- 應用價值：(一句話)\n摘要：\n{abstract}"""
                     response = client.chat.completions.create(
-                        model="llama-3.1-sonar-small-128k-chat",
+                        model="llama-3.1-8b-instant",
                         messages=[{"role": "user", "content": prompt}]
                     )
                     results.append({
@@ -127,15 +128,15 @@ elif app_mode == "📚 批次文獻處理與報表 (Perplexity)":
                 st.error(f"發生錯誤：{e}")
 
 # ==========================================
-# 模組三：蛋白質特徵與 UniProt 檢索 (Powered by GPT-4o-mini)
+# 模組三：蛋白質特徵與 UniProt 檢索
 # ==========================================
-elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-mini)":
+elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + Gemini)":
     st.header("🔬 序列解析、特徵運算與 UniProt 檢索")
-    st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 GPT-4o-mini 進行高階推理。")
+    st.write("使用 Biopython 運算特徵，檢索 UniProt 資料庫，並交由 Gemini 進行高階推理。")
     dna_input = st.text_area("請輸入 DNA 序列：", "ATGCGTACGGCCATTGACGAGTCCCTGAGGAAAAAAATGTAA")
     
     if st.button("執行生資管線分析"):
-        if not openai_api_key: st.error("請在左側輸入 OpenAI API Key！")
+        if not gemini_api_key: st.error("請在左側輸入 Gemini API Key！")
         else:
             # 1. 中心法則轉譯
             clean_dna = dna_input.upper().replace(" ", "").replace("\n", "")
@@ -181,11 +182,12 @@ elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-min
                 except Exception as e:
                     st.error("UniProt API 連線失敗。")
 
-                # 4. GPT-4o-mini 統整分析
+                # 4. Gemini 統整分析
                 st.markdown("---")
-                st.subheader("🤖 GPT-4o-mini 綜合生化報告")
+                st.subheader("🤖 Gemini 綜合生化報告")
                 try:
-                    client = OpenAI(api_key=openai_api_key)
+                    genai.configure(api_key=gemini_api_key)
+                    model = genai.GenerativeModel('gemini-1.5-flash')
                     prompt = f"""
                     請根據以下系統計算出的「絕對正確數據」來產生生化報告，不要自己瞎猜物理數值：
                     - 胺基酸序列：{protein_seq}
@@ -197,15 +199,10 @@ elif app_mode == "🔬 蛋白質特徵與資料庫比對 (Biopython + GPT-4o-min
                     請簡要分析：
                     1. 根據 GRAVY 與 pI 預測此蛋白質在細胞內的可能分佈環境。
                     2. 綜合評估其潛在功能或特性。
+                    請用高中生能理解的繁體中文回答。
                     """
-                    with st.spinner('GPT-4o-mini 正在進行深度生化推理...'):
-                        response = client.chat.completions.create(
-                            model="gpt-4o-mini", # 🎯 關鍵改動：換上最高 CP 值的 mini 引擎
-                            messages=[
-                                {"role": "system", "content": "你是一位頂尖的結構生物學家與生物資訊專家，擅長根據硬數據進行嚴謹推論。請用高中生能理解的繁體中文回答。"},
-                                {"role": "user", "content": prompt}
-                            ]
-                        )
-                    st.write(response.choices[0].message.content)
+                    with st.spinner('Gemini 正在進行深度生化推理...'):
+                        response = model.generate_content(prompt)
+                    st.write(response.text)
                 except Exception as e:
-                    st.error(f"OpenAI 連線錯誤：{e} (請確認您的 API Key 是否有可用額度)")
+                    st.error(f"Gemini 連線錯誤：{e} (請確認 API Key 格式)")
