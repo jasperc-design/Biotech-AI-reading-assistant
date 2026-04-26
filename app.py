@@ -18,8 +18,9 @@ with st.sidebar:
     
     st.subheader("🔑 API 密碼")
     st.markdown("以 **Groq Llama-3** 處理文本，**Gemini** 負責生化推理。")
-    groq_api_key = st.text_input("Groq API Key (Llama 3 用於文獻處理)：", type="password")
-    gemini_api_key = st.text_input("Gemini API Key (用於生化解析)：", type="password")
+    # 加上 .strip() 可以自動把使用者不小心輸入的頭尾空白全部砍掉！
+    groq_api_key = st.text_input("Groq API Key (Llama 3 用於文獻處理)：", type="password").strip()
+    gemini_api_key = st.text_input("Gemini API Key (用於生化解析)：", type="password").strip()
     st.markdown("---")
     
     app_mode = st.radio(
